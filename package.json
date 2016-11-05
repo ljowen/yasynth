@@ -1,0 +1,31 @@
+{
+  "name": "yas",
+  "version": "1.0.0",
+  "description": "",
+  "main": "bootstrap.min.js",
+  "dependencies": {
+    "babel": "^6.5.2",
+    "babelify": "^7.3.0",
+    "browserify": "^13.1.1",
+    "event-stream": "^3.3.4",
+    "gulp": "^3.9.1",
+    "gulp-autoprefixer": "^3.1.1",
+    "gulp-babel": "^6.1.2",
+    "gulp-concat": "^2.6.0",
+    "gulp-sass": "^2.3.2",
+    "gulp-rename": "^1.2.2",
+    "react": "^15.3.2",
+    "react-redux": "^4.4.5",
+    "redux": "^3.6.0",
+    "sass": "^0.5.0",
+    "streamqueue": "^1.1.1",
+    "vinyl-source-stream": "^1.1.0",
+    "watchify": "^3.7.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}
