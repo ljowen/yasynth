@@ -7,7 +7,7 @@ const initialState = {
     step: 0,
     sequence: (new Array(8)).fill(null).map((e,i) => {
         return {
-            freq : 50 + i*20,
+            freq : 200 - i*20,
             steps : (new Array(8)).fill(false)
         }
     })
@@ -28,6 +28,8 @@ const sequencer = (state = initialState, action) => {
             console.log('up seq', action.value);
             return Object.assign({}, state, {
                 sequence : state.sequence.map((row,i) => {
+                    if(i !== action.value.note) { return row; }
+                    //console.log('i r', i, action.value.note);
                     return {
                         steps : row.steps.map((on, j) => {
                             if(j == action.value.step) {
