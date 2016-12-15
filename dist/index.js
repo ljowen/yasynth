@@ -39436,6 +39436,24 @@ var updateSequence = exports.updateSequence = function updateSequence(value) {
     };
 };
 
+var play = exports.play = function play() {
+    return {
+        type: 'PLAY'
+    };
+};
+
+var stop = exports.stop = function stop() {
+    return {
+        type: 'STOP'
+    };
+};
+
+var step = exports.step = function step() {
+    return {
+        type: 'STEP'
+    };
+};
+
 },{}],213:[function(require,module,exports){
 'use strict';
 
@@ -39451,9 +39469,12 @@ var AudioOutput = exports.AudioOutput = function () {
     function AudioOutput(store) {
         _classCallCheck(this, AudioOutput);
 
-        console.log('ao constr', store);
+        //console.log('ao constr', store);
         this.store = store;
         this.context = new AudioContext();
+        this.n_gain = this.context.createGain();
+        this.n_gain.connect(this.context.destination);
+
         store.subscribe(this.update.bind(this));
     }
 
@@ -39463,16 +39484,19 @@ var AudioOutput = exports.AudioOutput = function () {
             var _this = this;
 
             var _seq = this.store.getState().sequencer;
-
+            this.n_gain.gain.value = 1 / _seq.sequence.length;
             _seq.sequence.forEach(function (row, i) {
-                console.log(row, _seq.step);
                 if (row.steps[_seq.step]) {
                     var ctx = _this.context;
                     var osc = ctx.createOscillator();
+                    osc.type = 'sine';
                     osc.frequency.value = row.freq;
-                    osc.connect(ctx.destination);
+                    osc.connect(_this.n_gain);
                     osc.start(ctx.currentTime);
                     osc.stop(ctx.currentTime + 0.3);
+
+                    console.log('osc', osc);
+                    //osc.disconnect();
                 }
             });
         }
@@ -39491,6 +39515,8 @@ exports.App = undefined;
 
 var _index = require('../containers/index');
 
+var _playback = require('./playback.jsx');
+
 var React = require('react');
 var App = exports.App = function App() {
     return React.createElement(
@@ -39500,7 +39526,46 @@ var App = exports.App = function App() {
     );
 };
 
-},{"../containers/index":216,"react":191}],215:[function(require,module,exports){
+},{"../containers/index":217,"./playback.jsx":215,"react":191}],215:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.PlaybackControls = undefined;
+
+var _react = require("react");
+
+var _react2 = _interopRequireDefault(_react);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var PlaybackControls = exports.PlaybackControls = function PlaybackControls(_ref) {
+    var onPlayClick = _ref.onPlayClick,
+        onStopClick = _ref.onStopClick,
+        onStepClick = _ref.onStepClick;
+    return _react2.default.createElement(
+        "div",
+        { className: "panel" },
+        _react2.default.createElement(
+            "a",
+            { onClick: onPlayClick, className: "btn btn-success" },
+            "PLAY"
+        ),
+        _react2.default.createElement(
+            "a",
+            { onClick: onStopClick, className: "btn btn-danger" },
+            "STOP"
+        ),
+        _react2.default.createElement(
+            "a",
+            { onClick: onStepClick, className: "btn btn-info" },
+            "STEP"
+        )
+    );
+};
+
+},{"react":191}],216:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -39514,8 +39579,7 @@ var _react2 = _interopRequireDefault(_react);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var renderRow = function renderRow(row, onStepClick, step, colNum) {
-    console.log('rr row', row);
+var renderRow = function renderRow(row, onCellClick, step, colNum) {
     return row.map(function (e, i) {
         return _react2.default.createElement(
             'td',
@@ -39523,7 +39587,7 @@ var renderRow = function renderRow(row, onStepClick, step, colNum) {
             _react2.default.createElement(
                 'a',
                 { style: { height: '20px' },
-                    onClick: onStepClick.bind(undefined, { step: i, note: colNum, on: !e }),
+                    onClick: onCellClick.bind(undefined, { step: i, note: colNum, on: !e }),
                     className: 'btn btn-block btn-primary ' + (e ? ' btn-success ' : '') + (i == step ? ' btn-warning ' : '') },
                 i
             )
@@ -39546,7 +39610,7 @@ var Sequencer = exports.Sequencer = function Sequencer(_ref) {
         n_ticks = _ref.n_ticks,
         n_steps = _ref.n_steps,
         sequence = _ref.sequence,
-        onStepClick = _ref.onStepClick;
+        onCellClick = _ref.onCellClick;
     return _react2.default.createElement(
         'div',
         { className: '' },
@@ -39556,13 +39620,13 @@ var Sequencer = exports.Sequencer = function Sequencer(_ref) {
             _react2.default.createElement(
                 'tbody',
                 null,
-                renderGrid(step, n_steps, sequence, onStepClick)
+                renderGrid(step, n_steps, sequence, onCellClick)
             )
         )
     );
 };
 
-},{"react":191}],216:[function(require,module,exports){
+},{"react":191}],217:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -39576,6 +39640,31 @@ var _actions = require('../actions');
 
 var _sequencer = require('../components/sequencer.jsx');
 
+var _playback = require('../components/playback.jsx');
+
+var _react = require('react');
+
+var _react2 = _interopRequireDefault(_react);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var App = function App(_ref) {
+   var step = _ref.step,
+       n_ticks = _ref.n_ticks,
+       n_steps = _ref.n_steps,
+       sequence = _ref.sequence,
+       onCellClick = _ref.onCellClick,
+       onPlayClick = _ref.onPlayClick,
+       onStepClick = _ref.onStepClick,
+       onStopClick = _ref.onStopClick;
+   return _react2.default.createElement(
+      'div',
+      { className: 'container' },
+      _react2.default.createElement(_playback.PlaybackControls, { onPlayClick: onPlayClick, onStopClick: onStopClick, onStepClick: onStepClick }),
+      _react2.default.createElement(_sequencer.Sequencer, { step: step, sequence: sequence, onCellClick: onCellClick })
+   );
+};
+
 var mapStateToProps = function mapStateToProps(state) {
    return {
       n_ticks: state.sequencer.n_ticks,
@@ -39587,15 +39676,24 @@ var mapStateToProps = function mapStateToProps(state) {
 
 var mapDispatchToProps = function mapDispatchToProps(dispatch) {
    return {
-      onStepClick: function onStepClick(val, row, col) {
+      onCellClick: function onCellClick(val, row, col) {
          dispatch((0, _actions.updateSequence)(val, row, col));
+      },
+      onPlayClick: function onPlayClick() {
+         dispatch((0, _actions.play)());
+      },
+      onStopClick: function onStopClick() {
+         dispatch((0, _actions.stop)());
+      },
+      onStepClick: function onStepClick() {
+         dispatch((0, _actions.tick)());
       }
    };
 };
 
-var AppContainer = exports.AppContainer = (0, _reactRedux.connect)(mapStateToProps, mapDispatchToProps)(_sequencer.Sequencer);
+var AppContainer = exports.AppContainer = (0, _reactRedux.connect)(mapStateToProps, mapDispatchToProps)(App);
 
-},{"../actions":212,"../components/sequencer.jsx":215,"react-redux":6}],217:[function(require,module,exports){
+},{"../actions":212,"../components/playback.jsx":215,"../components/sequencer.jsx":216,"react":191,"react-redux":6}],218:[function(require,module,exports){
 'use strict';
 
 var _reactDom = require('react-dom');
@@ -39642,7 +39740,9 @@ window.tock = function () {
     store.dispatch((0, _actions.updateSequence)({ value: 1 }));
 };
 var _ticker = setInterval(function () {
-    store.dispatch((0, _actions.tick)('timer tick'));
+    if (store.getState().playback.play) {
+        store.dispatch((0, _actions.tick)('timer tick'));
+    }
 }, 500);
 
 store.dispatch((0, _actions.tick)('Learn about actions'));
@@ -39664,7 +39764,7 @@ _reactDom2.default.render(_react2.default.createElement(
     _react2.default.createElement(_index.App, null)
 ), document.getElementById('app'));
 
-},{"./actions":212,"./audio/output.js":213,"./components/index.jsx":214,"./reducers":218,"react":191,"react-dom":3,"react-redux":6,"redux":197}],218:[function(require,module,exports){
+},{"./actions":212,"./audio/output.js":213,"./components/index.jsx":214,"./reducers":219,"react":191,"react-dom":3,"react-redux":6,"redux":197}],219:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -39677,38 +39777,79 @@ var _sequencer = require('./sequencer');
 
 var _sequencer2 = _interopRequireDefault(_sequencer);
 
+var _playback = require('./playback');
+
+var _playback2 = _interopRequireDefault(_playback);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var yasApp = (0, _redux.combineReducers)({
-    sequencer: _sequencer2.default
+    sequencer: _sequencer2.default,
+    playback: _playback2.default
 });
 
 exports.default = yasApp;
 
-},{"./sequencer":219,"redux":197}],219:[function(require,module,exports){
+},{"./playback":220,"./sequencer":221,"redux":197}],220:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+var initialState = {
+    play: false
+};
 
-var _lodash = require('lodash');
+var playback = function playback() {
+    var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : initialState;
+    var action = arguments[1];
+
+    switch (action.type) {
+        case 'PLAY':
+            return {
+                play: true
+            };
+        case 'STOP':
+            return {
+                play: false
+            };
+        default:
+            return state;
+    }
+};
+
+exports.default = playback;
+
+},{}],221:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _lodash = require("lodash");
 
 var _lodash2 = _interopRequireDefault(_lodash);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var __seq = [{ "steps": [true, true, false, false, false, false, false, false], "freq": 523.25 }, { "steps": [false, false, false, true, false, true, false, false], "freq": 493.88 }, { "steps": [true, true, false, false, true, false, true, false], "freq": 440 }, { "steps": [false, false, false, true, false, true, false, true], "freq": 392 }, { "steps": [true, true, false, false, false, false, true, false], "freq": 349.23 }, { "steps": [false, false, true, false, false, false, false, true], "freq": 329.63 }, { "steps": [true, true, false, true, false, false, false, false], "freq": 293.66 }, { "steps": [false, false, true, false, false, false, false, true], "freq": 261.63 }];
+
+var scale = [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25];
 
 var initialState = {
     n_ticks: 0,
     n_steps: 8,
     n_notes: 8,
     step: 0,
-    sequence: new Array(8).fill(null).map(function (e, i) {
-        return {
-            freq: 200 - i * 20,
-            steps: new Array(8).fill(false)
-        };
-    })
+    //sequence: (new Array(8)).fill(null).map((e,i) => {
+    //    return {
+    //        freq : scale[7-i],//200 - i*20,
+    //        steps : (new Array(8)).fill(false)
+    //    }
+    //}),
+    sequence: __seq,
+    play: false
 };
 
 console.log('seq red init', initialState);
@@ -39751,4 +39892,4 @@ var sequencer = function sequencer() {
 
 exports.default = sequencer;
 
-},{"lodash":2}]},{},[217]);
+},{"lodash":2}]},{},[218]);

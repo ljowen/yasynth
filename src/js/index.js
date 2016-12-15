@@ -24,7 +24,11 @@ let unsubscribe = store.subscribe(() => {
 
 window.tick = () => { store.dispatch(tick('Learn about actions')); }
 window.tock = () => { store.dispatch(updateSequence({value : 1})); }
-let _ticker = setInterval(() => { store.dispatch(tick('timer tick')) }, 500);
+let _ticker = setInterval(() => {
+    if(store.getState().playback.play) {
+        store.dispatch(tick('timer tick'))
+    }
+}, 500);
 
 store.dispatch(tick('Learn about actions'));
 store.dispatch(tick('Learn about actions'));
